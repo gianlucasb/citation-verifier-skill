@@ -1,0 +1,16 @@
+{
+  "name": "citation-verifier-skill",
+  "description": "Verify that claims made about cited works in a paper are actually supported by those works.",
+  "owner": {
+    "name": "Gianluca Stringhini",
+    "url": "https://github.com/gianlucasb"
+  },
+  "plugins": [
+    {
+      "name": "citation-check",
+      "source": "./citation-check",
+      "description": "Verify that claims made about cited works in a LaTeX paper are actually supported by those works.",
+      "version": "1.0.0"
+    }
+  ]
+}

@@ -305,10 +305,27 @@ def main():
     if args.follow_inputs:
         text = resolve_inputs(text, os.path.dirname(os.path.abspath(args.tex)))
 
-    bib = {}
+    bib, missing_files = {}, []
     for b in args.bib:
         if os.path.isfile(b):
             bib.update(parse_bib(b))
+        else:
+            missing_files.append(b)
+
+    # A mistyped --bib path used to be skipped in silence, resolving nothing
+    # and listing every key in keys_missing_from_bib -- which SKILL.md treats
+    # as a compile error to report immediately. Fail loudly instead: a wrong
+    # "your bibliography is broken" report costs more than no report.
+    if missing_files:
+        for b in missing_files:
+            sys.stderr.write("error: bib file not found: %s\n" % b)
+        sys.stderr.write("error: refusing to report unresolved citation keys; "
+                         "every key would look missing from the "
+                         "bibliography.\n")
+        return 2
+    if not args.bib:
+        sys.stderr.write("warning: no --bib given, so no key can be resolved; "
+                         "keys_missing_from_bib will list every citation.\n")
 
     results, seen = [], set()
     for m in CITE_RE.finditer(text):
@@ -358,7 +375,8 @@ def main():
         "citations": results,
     }, sys.stdout, indent=2, ensure_ascii=False)
     sys.stdout.write("\n")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

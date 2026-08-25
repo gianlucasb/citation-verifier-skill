@@ -215,6 +215,13 @@ def parse_bib(path):
 PREPRINT_WORDS = ("arxiv", "corr", "preprint", "biorxiv", "medrxiv",
                   "ssrn", "openreview", "techrxiv", "under review",
                   "submitted to")
+# Matched with word boundaries. Plain substring matching turned any venue
+# containing "corr" into a preprint -- "Memory Corruption", "Correctness of
+# Systems", "Data Correlation" -- which for a security bibliography is a
+# routine false positive rather than an edge case.
+PREPRINT_RE = re.compile(
+    r"\b(?:" + "|".join(re.escape(w) for w in PREPRINT_WORDS) + r")\b")
+
 # Preprint-server hosts. Deliberately excludes code hosts and doc sites, which
 # are legitimate permanent homes for software and documentation citations.
 PREPRINT_HOSTS = ("arxiv.org", "biorxiv.org", "medrxiv.org", "ssrn.com",
@@ -237,12 +244,12 @@ def preprint_status(entry):
     # alongside its real venue, and that must not read as "preprint".
     venue = " ".join(str(entry.get(f, ""))
                      for f in ("journal", "booktitle", "series")).lower()
-    if venue and not any(w in venue for w in PREPRINT_WORDS):
+    if venue and not PREPRINT_RE.search(venue):
         return "published"
 
     urls = " ".join(str(entry.get(f, "")) for f in
                     ("url", "howpublished", "note")).lower()
-    if (any(w in venue for w in PREPRINT_WORDS)
+    if (PREPRINT_RE.search(venue)
             or any(h in urls for h in PREPRINT_HOSTS)
             or bool(entry.get("eprint"))):
         return "preprint_only"

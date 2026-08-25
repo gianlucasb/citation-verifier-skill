@@ -15,15 +15,28 @@ import os
 import re
 import sys
 
-# Citation commands from natbib, biblatex, and plain LaTeX.
-CITE_CMDS = [
+# Citation commands from natbib, biblatex, plain LaTeX, and the older
+# apalike/chicago styles still used by some venues (\shortcite, \citeN,
+# \citeA). \nocite is deliberately absent: it forces a bibliography entry
+# without making any claim, so treating it as a citation site would invent
+# claims to verify.
+_CITE_BASES = [
     "citep", "citet", "citealp", "citealt", "citeauthor", "citeyearpar",
     "citeyear", "autocite", "textcite", "parencite", "footcite", "fullcite",
-    "supercite", "smartcite", "cites", "Citep", "Citet", "Autocite",
-    "Textcite", "Parencite", "cite",
+    "supercite", "smartcite", "cites", "shortcite", "shortciteA",
+    "shortciteN", "citeN", "citeA", "cite",
 ]
+# biblatex defines a capitalised variant of each command for sentence-initial
+# use; derive them instead of listing both spellings by hand, which is how
+# \Cite, \Citealp and \Citeauthor came to be missing.
+CITE_CMDS = sorted(
+    {c for b in _CITE_BASES for c in (b, b[0].upper() + b[1:])},
+    key=lambda c: (-len(c), c))
+# Longest-first so the alternation cannot match a short command as the prefix
+# of a longer one, and \*? so natbib's starred forms (\citep*{...}) are not
+# skipped.
 CITE_RE = re.compile(
-    r"\\(" + "|".join(CITE_CMDS) + r")\s*((?:\[[^\]]*\]\s*)*)\{([^}]*)\}"
+    r"\\(" + "|".join(CITE_CMDS) + r")\*?\s*((?:\[[^\]]*\]\s*)*)\{([^}]*)\}"
 )
 
 # Abbreviations that must not be treated as sentence boundaries.

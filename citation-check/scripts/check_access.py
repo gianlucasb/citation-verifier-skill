@@ -55,6 +55,11 @@ TITLE_STOP = {
     "detection", "towards", "understanding", "evaluation", "empirical",
 }
 
+# Entry types whose full text is a web page rather than a PDF. Citing a
+# statute, a news article or a tool leaves nothing to download: the page is
+# the source, so reaching it is full access, not an uncertain result.
+WEB_TYPES = ("misc", "online", "electronic", "www", "webpage", "software")
+
 MAX_LIBRARY_FILES = 50000
 
 
@@ -197,8 +202,20 @@ def scan_local(records, cache_dir, libraries):
     return found, len(pdfs)
 
 
-def probe(url, timeout, delay):
-    """Fetch the first bytes of a URL and describe what came back."""
+def probe(url, timeout, delay, retries=1):
+    """Fetch the first bytes of a URL and describe what came back.
+
+    One retry, because a single connection failure is not evidence that a
+    source is unobtainable and reporting it as such sends the user chasing a
+    paper that was only ever a dropped packet.
+    """
+    for attempt in range(retries + 1):
+        result = _probe_once(url, timeout, delay)
+        if result["error"] is None or attempt == retries:
+            return result
+
+
+def _probe_once(url, timeout, delay):
     if delay:
         time.sleep(delay)
     req = urllib.request.Request(url, headers={
@@ -234,26 +251,49 @@ def is_paywall_host(url):
     return any(h == d or h.endswith("." + d) for d in PAYWALL_HOSTS)
 
 
-def classify(p):
+def expects_page(rec, label):
+    """Is this entry's full text a web page rather than a PDF?
+
+    A @misc carrying an arXiv ID or DOI is a paper that happens to use that
+    entry type, so the locator decides before the type does.
+    """
+    if label != "bib-url":
+        return False
+    if any(k in rec["locators"] for k in ("arxiv", "iacr_eprint", "doi")):
+        return False
+    return (rec.get("entry_type") or "").lower() in WEB_TYPES
+
+
+def classify(p, rec, label):
     """Turn a probe result into a status and a human explanation."""
     if p["error"]:
         return "unreachable", p["error"]
     code = p["status"]
+    host = host_of(p["final_url"])
     if code in (200, 206):
         if p["is_pdf"] or p["content_type"] == "application/pdf":
             return "open_pdf", "PDF served directly"
         if is_paywall_host(p["final_url"]):
             return "paywalled", ("landed on %s, which serves the PDF only to "
-                                 "subscribers" % host_of(p["final_url"]))
+                                 "subscribers" % host)
+        if expects_page(rec, label):
+            return "open_page", ("page reachable -- for a @%s entry the page "
+                                 "is the source, there is no PDF to find"
+                                 % (rec.get("entry_type") or "misc"))
         return "landing_page", ("returned %s, not a PDF -- probably an "
                                 "abstract or landing page"
                                 % (p["content_type"] or "HTML"))
     if code in (401, 402, 403):
-        # Cloudflare and several publishers answer 403 to any non-browser
-        # client, so this is not proof of a paywall.
-        return "paywalled", ("HTTP %d from %s -- a paywall, or bot blocking "
-                             "that a browser or the fetch tool may get past"
-                             % (code, host_of(p["final_url"])))
+        if is_paywall_host(p["final_url"]):
+            return "paywalled", ("HTTP %d from %s -- subscriber-only"
+                                 % (code, host))
+        # Government, NGO and news sites routinely answer 403 to any
+        # non-browser client. Calling that a paywall would send the user off
+        # to hand-download a public web page.
+        return "probe_blocked", ("HTTP %d from %s -- the probe was refused, "
+                                 "which on a non-publisher host is far more "
+                                 "likely bot blocking than a paywall"
+                                 % (code, host))
     if code in (404, 410):
         return "not_found", "HTTP %d -- the locator in the .bib is dead" % code
     return "unreachable", "HTTP %s" % code
@@ -268,14 +308,14 @@ def resolve_one(rec, timeout, delay):
             "tried": []}
     tried, best = [], None
     for label, url in cands:
-        status, note = classify(probe(url, timeout, delay))
+        status, note = classify(probe(url, timeout, delay), rec, label)
         tried.append({"via": label, "url": url, "status": status,
                       "note": note})
-        if status == "open_pdf":
-            return {"status": "open_pdf", "note": note, "url": url,
+        if status in ("open_pdf", "open_page"):
+            return {"status": status, "note": note, "url": url,
                     "via": label, "tried": tried}
-        rank = {"landing_page": 3, "paywalled": 2, "not_found": 1,
-                "unreachable": 0}
+        rank = {"probe_blocked": 4, "landing_page": 3, "paywalled": 2,
+                "not_found": 1, "unreachable": 0}
         if best is None or rank[status] > rank[best["status"]]:
             best = {"status": status, "note": note, "url": url,
                     "via": label}
@@ -292,7 +332,7 @@ def network_alive(timeout):
     """
     for url in ("https://arxiv.org/robots.txt",
                 "https://eprint.iacr.org/robots.txt"):
-        r = probe(url, timeout, 0)
+        r = probe(url, timeout, 0, retries=0)
         if r["error"] is None and r["status"] in (200, 206, 404):
             return True
     return False
@@ -362,10 +402,10 @@ def build_report(data, args):
 # be visible before verification starts, but only BLOCKED needs a human:
 # TOOL is work the verification step does anyway, and calling it a manual
 # fetch would raise a false alarm on every sandboxed run.
-READY = ("local", "open_pdf")
+READY = ("local", "open_pdf", "open_page")
 BLOCKED = ("paywalled", "not_found", "unreachable", "no_locator",
            "no_bib_entry")
-UNCERTAIN = ("landing_page",)
+UNCERTAIN = ("landing_page", "probe_blocked")
 TOOL = ("needs_tool_fetch",)
 
 HOW_TO_FIND = {
@@ -378,6 +418,8 @@ HOW_TO_FIND = {
     "no_bib_entry": "fix or add the .bib entry first -- this key will not "
                     "compile",
     "landing_page": "open the page and look for a PDF link",
+    "probe_blocked": "fetch it with the fetch tool or a browser -- what was "
+                     "refused was the probe, not necessarily the content",
     "needs_tool_fetch": "use the fetch tool on the candidate URLs above",
 }
 

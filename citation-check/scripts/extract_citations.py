@@ -365,6 +365,7 @@ def main():
                 "claim_sentence": ctx["claim_sentence"],
                 "preceding_context": ctx["preceding_context"],
                 "bib_found": entry is not None,
+                "entry_type": entry.get("entry_type") if entry else None,
                 "title": clean_field(entry.get("title")) if entry else None,
                 "author": clean_field(entry.get("author")) if entry else None,
                 "year": clean_field(entry.get("year")) if entry else None,

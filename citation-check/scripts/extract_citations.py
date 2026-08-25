@@ -258,6 +258,27 @@ def clean_field(value):
     return re.sub(r"\s+", " ", value).strip()
 
 
+def first_url(entry):
+    """Pull a URL out of url, howpublished or note, in that order.
+
+    Hand-written entries routinely put the link in howpublished as
+    \\url{...} and leave the url field empty, so reading only the url field
+    misses them -- and a locator that is present but unread looks exactly
+    like a reference with no locator at all.
+    """
+    for f in ("url", "howpublished", "note"):
+        v = str(entry.get(f, ""))
+        if not v:
+            continue
+        m = re.search(r"\\url\s*\{([^}]+)\}", v)
+        if m:
+            return m.group(1).strip()
+        m = re.search(r"https?://[^\s,}{]+", v)
+        if m:
+            return m.group(0).strip().rstrip(".,;")
+    return None
+
+
 def build_locators(entry):
     """Derive lookup handles: DOI, arXiv ID, IACR ePrint ID, URL."""
     if not entry:
@@ -277,14 +298,22 @@ def build_locators(entry):
         if am:
             loc["arxiv"] = am.group(1).replace(".pdf", "")
 
+    # A bare "arXiv:2603.13620" in howpublished or note names no host, so the
+    # arxiv.org pattern above cannot see it.
+    if "arxiv" not in loc:
+        am = re.search(r"arxiv\s*:\s*(\d{4}\.\d{4,5}(?:v\d+)?)", blob, re.I)
+        if am:
+            loc["arxiv"] = am.group(1)
+
     im = re.search(r"eprint\.iacr\.org/(\d{4}/\d+)", blob, re.I)
     if im:
         loc["iacr_eprint"] = im.group(1)
     elif eprint and "iacr" in prefix:
         loc["iacr_eprint"] = eprint.strip()
 
-    if entry.get("url"):
-        loc["url"] = entry["url"].strip()
+    url = first_url(entry)
+    if url:
+        loc["url"] = url
     return loc
 
 

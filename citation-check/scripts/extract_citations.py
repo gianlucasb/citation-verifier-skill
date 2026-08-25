@@ -228,6 +228,10 @@ def preprint_status(entry):
     case the preprint's numbers may be superseded. Software, documentation,
     and web resources are NOT preprints and are not flagged -- they have no
     published version to find, so flagging them is noise.
+
+    An entry need not have a venue field at all: a bare @misc carrying only
+    an eprint, or an @unpublished whose note says "under review", is still
+    preprint-only, so url/howpublished/note are inspected as well.
     """
     if not entry:
         return None
@@ -235,14 +239,21 @@ def preprint_status(entry):
     # The venue is whatever booktitle/journal says. archiveprefix and eprint
     # are just identifiers: a published paper routinely carries an arXiv ID
     # alongside its real venue, and that must not read as "preprint".
-    venue = " ".join(str(entry.get(f, ""))
-                     for f in ("journal", "booktitle", "series")).lower()
+    # strip() matters: " ".join of three absent fields is "  ", which is
+    # truthy, so without it every entry lacking a venue field returned
+    # "published" here and the preprint checks below were unreachable.
+    venue = " ".join(str(entry.get(f, "")) for f in
+                     ("journal", "booktitle", "series")).lower().strip()
     if venue and not any(w in venue for w in PREPRINT_WORDS):
         return "published"
 
+    # "under review" and "submitted to" only ever appear in note or
+    # howpublished, so the word list has to be checked against those fields
+    # too -- as does a bare "arXiv:2401.01234" in howpublished, which names
+    # no host for PREPRINT_HOSTS to match.
     urls = " ".join(str(entry.get(f, "")) for f in
                     ("url", "howpublished", "note")).lower()
-    if (any(w in venue for w in PREPRINT_WORDS)
+    if (any(w in venue or w in urls for w in PREPRINT_WORDS)
             or any(h in urls for h in PREPRINT_HOSTS)
             or bool(entry.get("eprint"))):
         return "preprint_only"

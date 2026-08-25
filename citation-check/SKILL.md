@@ -74,17 +74,25 @@ python3 <skill-dir>/scripts/extract_citations.py PAPER.tex --bib REFS.bib \
 It groups every key into four buckets and names, for each one it cannot get,
 what to search for and the exact path to save the PDF to:
 
-- **READY** — already on disk, or an open-access PDF confirmed reachable.
+- **READY** — already on disk, an open-access PDF confirmed reachable, or —
+  for a `@misc`/`@online`/`@software` entry cited by URL — the web page
+  itself, which for a statute, news article or tool *is* the source.
   Where a local path is given, read that file instead of fetching. A path
   marked `[probable]` was matched on title words, so confirm the title and
   authors before trusting it.
 - **TOOL FETCH** — bash has no outbound network on this surface, so nothing
   could be probed. No manual action needed; fetch these with the fetch tool
   during step 4 as usual.
-- **UNCERTAIN** — the locator resolved to a landing page rather than a PDF.
-  Try it yourself before asking the user; often the PDF is one link away.
-- **NEEDS YOU** — paywalled, dead locator, no locator in the `.bib`, or the
-  key is missing from the `.bib` entirely. These need the user.
+- **SEARCH** — the `.bib` entry carries no DOI, arXiv ID or URL, so there was
+  nothing to probe. Find these by title during step 4 as usual, and report
+  any you genuinely cannot find as NOT LOCATED. Not a blocker: a plain
+  `@inproceedings` with only a title, author and venue is normal.
+- **UNCERTAIN** — reachable, but not confirmed full text: a landing page
+  rather than a PDF, or a probe refused with 403 by a host that is not a
+  known publisher, which is usually bot blocking. Try these yourself before
+  asking the user; often the PDF is one link away.
+- **NEEDS YOU** — paywalled at a publisher, a dead locator, unreachable, or
+  the key is missing from the `.bib` entirely. These need the user.
 
 Exit status is 3 when the NEEDS YOU bucket is non-empty and 0 otherwise, so
 it is a reliable gate: **do not start verifying while it exits 3.**

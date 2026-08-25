@@ -95,6 +95,7 @@ def collapse_to_keys(data):
             "year": c.get("year"),
             "venue": c.get("venue"),
             "bib_found": c.get("bib_found", False),
+            "entry_type": c.get("entry_type"),
             "locators": c.get("locators") or {},
             "sites": 0,
             "sections": [],
@@ -270,7 +271,7 @@ def classify(p, rec, label):
         return "unreachable", p["error"]
     code = p["status"]
     host = host_of(p["final_url"])
-    if code in (200, 206):
+    if code and 200 <= code < 300:
         if p["is_pdf"] or p["content_type"] == "application/pdf":
             return "open_pdf", "PDF served directly"
         if is_paywall_host(p["final_url"]):
@@ -333,7 +334,8 @@ def network_alive(timeout):
     for url in ("https://arxiv.org/robots.txt",
                 "https://eprint.iacr.org/robots.txt"):
         r = probe(url, timeout, 0, retries=0)
-        if r["error"] is None and r["status"] in (200, 206, 404):
+        if r["error"] is None and (r["status"] == 404
+                                   or 200 <= (r["status"] or 0) < 300):
             return True
     return False
 
@@ -403,10 +405,13 @@ def build_report(data, args):
 # TOOL is work the verification step does anyway, and calling it a manual
 # fetch would raise a false alarm on every sandboxed run.
 READY = ("local", "open_pdf", "open_page")
-BLOCKED = ("paywalled", "not_found", "unreachable", "no_locator",
-           "no_bib_entry")
+BLOCKED = ("paywalled", "not_found", "unreachable", "no_bib_entry")
 UNCERTAIN = ("landing_page", "probe_blocked")
 TOOL = ("needs_tool_fetch",)
+# A .bib entry with no locator is not a blocked source -- it is one nobody
+# has looked for yet, and a title search usually finds it. Blocking on these
+# would stop verification on any bibliography of plain conference entries.
+SEARCH = ("no_locator",)
 
 HOW_TO_FIND = {
     "paywalled": "search the exact title -- author institutional pages host "
@@ -438,11 +443,13 @@ def render_text(rep, only_missing=False):
         out.append("scanned %d PDFs in the given libraries"
                    % rep["library_pdfs_scanned"])
 
-    groups = {"ready": [], "uncertain": [], "tool": [], "blocked": []}
+    groups = {"ready": [], "uncertain": [], "tool": [], "search": [],
+              "blocked": []}
     for rec in rep["keys"]:
         st = rec["access"]["status"]
         groups["ready" if st in READY else
                "tool" if st in TOOL else
+               "search" if st in SEARCH else
                "uncertain" if st in UNCERTAIN else "blocked"].append(rec)
 
     def describe(rec, indent="    "):
@@ -489,6 +496,16 @@ def render_text(rep, only_missing=False):
             out.append("")
             out.extend(describe(rec))
 
+    if groups["search"]:
+        out.append("")
+        out.append("SEARCH (%d) -- no locator in the .bib; find these by "
+                   "title during" % len(groups["search"]))
+        out.append("verification, and report any you cannot find as NOT "
+                   "LOCATED")
+        for rec in groups["search"]:
+            out.append("")
+            out.extend(describe(rec))
+
     if groups["tool"]:
         out.append("")
         out.append("TOOL FETCH (%d) -- no manual action needed; fetch these "
@@ -514,7 +531,7 @@ def render_text(rep, only_missing=False):
     out.append("")
     n_blocked = len(groups["blocked"])
     n_unc = len(groups["uncertain"])
-    n_tool = len(groups["tool"])
+    n_tool = len(groups["tool"]) + len(groups["search"])
     if n_blocked:
         out.append("%d of %d keys need you: fetch them by hand, save them to "
                    "%s," % (n_blocked, rep["total_keys"],

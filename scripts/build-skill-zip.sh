@@ -12,6 +12,8 @@ rm -f "$OUT"
 # the plain skill format claude.ai expects.
 zip -r "$OUT" citation-check \
   -x 'citation-check/.claude-plugin/*' \
+  -x '**/__pycache__/*' \
+  -x '**/*.pyc' \
   -x '**/.DS_Store'
 
 echo "Built $OUT"

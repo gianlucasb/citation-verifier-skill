@@ -13,10 +13,18 @@ original. Point it at a `.tex` and `.bib` file and it resolves every
 and more. See [`citation-check/SKILL.md`](citation-check/SKILL.md) for the
 full verdict table and workflow.
 
-The bundled `extract_citations.py` is dependency-free (stdlib-only Python 3)
-and does the mechanical part: parsing LaTeX citation commands, matching keys
-against the `.bib`, and pulling out the sentence each citation actually
-attaches to.
+Before it verifies anything it runs a **pre-flight access check**: every
+cited work is probed to see whether its full text is actually readable, and
+anything that isn't — paywalled, dead DOI, no locator in the `.bib` — is
+reported up front, with what to search for and the exact path to save the PDF
+to. A source that can't be read is a citation nobody checked, and that is
+indistinguishable from a clean one unless it's surfaced deliberately.
+
+The two bundled scripts are dependency-free (stdlib-only Python 3).
+`extract_citations.py` does the mechanical part: parsing LaTeX citation
+commands, matching keys against the `.bib`, and pulling out the sentence each
+citation actually attaches to. `check_access.py` consumes its output and
+answers "can I read all of this yet?".
 
 ## Install
 
@@ -69,6 +77,12 @@ Once installed, just ask, in either surface:
 
 > Verify the related-work section's claims.
 
+> Just check whether you can get all the papers first — don't verify yet.
+
+That last one runs the pre-flight alone. It's worth doing before a long run:
+it takes seconds, and it tells you what to go download before you wait on a
+90-reference verification that would have skipped six of them.
+
 Claude finds the skill from the request itself — you don't need to invoke it
 by name. For a large bibliography, expect it to ask what to scope to first;
 full-text verification of every reference in a 90-citation paper is a long
@@ -80,6 +94,11 @@ Only Python 3 (standard library only, no `pip install`). Claude Code runs it
 directly; claude.ai runs it inside its sandboxed code execution container
 automatically.
 
+The pre-flight needs outbound HTTPS to probe sources. Where it doesn't have
+that — claude.ai's sandbox restricts bash networking to package registries —
+it detects the fact, says so, and hands Claude the candidate URLs to fetch
+with its own tooling instead of blaming the papers for the environment.
+
 ## Repo layout
 
 ```
@@ -87,7 +106,8 @@ citation-check/
 ├── .claude-plugin/plugin.json   # Claude Code plugin manifest
 ├── SKILL.md                     # the skill itself
 └── scripts/
-    └── extract_citations.py     # citation extraction / .bib resolution
+    ├── extract_citations.py     # citation extraction / .bib resolution
+    └── check_access.py          # pre-flight: is every source readable?
 .claude-plugin/marketplace.json  # lets Claude Code install this via /plugin
 citation-check.skill             # prebuilt zip for the claude.ai uploader
 scripts/build-skill-zip.sh       # regenerates citation-check.skill
@@ -100,8 +120,9 @@ sync.
 ## Security note
 
 Skills run with Claude's file and network access. Read
-[`citation-check/SKILL.md`](citation-check/SKILL.md) and
-[`extract_citations.py`](citation-check/scripts/extract_citations.py) before
+[`citation-check/SKILL.md`](citation-check/SKILL.md),
+[`extract_citations.py`](citation-check/scripts/extract_citations.py) and
+[`check_access.py`](citation-check/scripts/check_access.py) before
 installing — auditing something this small takes a couple of minutes and is
 good practice for any skill from an outside source, this one included.
 

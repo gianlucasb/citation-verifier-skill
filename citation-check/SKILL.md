@@ -59,6 +59,52 @@ Two lists in the output need acting on before any claim checking:
 - `keys_needing_published_version_check` — entries whose only venue is a
   preprint server. Run the check in step 4b on each.
 
+### 2b. Pre-flight: confirm the sources can be read
+
+**Run this before verifying anything.** A source you cannot read is not a
+citation that passed — it is a citation nobody checked, and it looks
+identical to a clean one in the final report unless it is surfaced
+deliberately.
+
+```bash
+python3 <skill-dir>/scripts/extract_citations.py PAPER.tex --bib REFS.bib \
+  | python3 <skill-dir>/scripts/check_access.py --library ~/Zotero/storage
+```
+
+It groups every key into four buckets and names, for each one it cannot get,
+what to search for and the exact path to save the PDF to:
+
+- **READY** — already on disk, or an open-access PDF confirmed reachable.
+  Where a local path is given, read that file instead of fetching. A path
+  marked `[probable]` was matched on title words, so confirm the title and
+  authors before trusting it.
+- **TOOL FETCH** — bash has no outbound network on this surface, so nothing
+  could be probed. No manual action needed; fetch these with the fetch tool
+  during step 4 as usual.
+- **UNCERTAIN** — the locator resolved to a landing page rather than a PDF.
+  Try it yourself before asking the user; often the PDF is one link away.
+- **NEEDS YOU** — paywalled, dead locator, no locator in the `.bib`, or the
+  key is missing from the `.bib` entirely. These need the user.
+
+Exit status is 3 when the NEEDS YOU bucket is non-empty and 0 otherwise, so
+it is a reliable gate: **do not start verifying while it exits 3.**
+
+Instead, show the user that bucket — the titles, what was tried, and the save
+paths — and ask whether to wait for the PDFs or to proceed on the readable
+subset. Both answers are fine; silently picking the second is not. If they
+choose to proceed, every skipped key still appears in the final report as
+UNVERIFIED.
+
+Two flags matter: `--library DIR` (repeatable) points at a reference library
+the user already has, and `--cache-dir DIR` sets where manually fetched PDFs
+go. The cache is the contract offered to the user — a PDF saved as
+`<cache-dir>/<key>.pdf` is picked up verbatim on the next run, so re-run the
+check after they add files rather than asking twice.
+
+A 403 is reported as paywalled but may be bot blocking; the fetch tool or a
+browser sometimes gets through where the probe did not. Worth one attempt
+before reporting it to the user as unobtainable.
+
 ### 3. Identify the actual claim
 
 The extracted `claim_sentence` is a starting point, not the answer. Read it
@@ -142,10 +188,16 @@ you ran, so the user can judge whether the work is missing or merely obscure.
 Never guess at what the reference "probably" is — report the gap and let the
 user resolve it.
 
-Collect UNVERIFIED cases and ask for PDFs once at the end rather than
-interrupting per-paper. Where a local filesystem is available, check first
-whether the user already has a reference library (a Zotero storage
-directory, a `papers/` folder beside the manuscript) before asking.
+Ideally the pre-flight in step 2b already surfaced these and the user has
+decided what to do, so nothing here is a surprise. Where a source turns out
+to be unobtainable only at this stage, collect those cases and ask for the
+PDFs once, rather than interrupting per-paper — and name the same
+`<cache-dir>/<key>.pdf` paths the pre-flight uses, so a re-run picks them up.
+
+Where a local filesystem is available, check whether the user already has a
+reference library (a Zotero storage directory, a `papers/` folder beside the
+manuscript) before asking; `check_access.py --library DIR` does this
+mechanically.
 
 ### 4b. Check whether preprints have since been published
 
@@ -216,6 +268,13 @@ OVERSTATED and THREAT-MODEL MISMATCH, then NOT FOUND, then OUTDATED VENUE,
 then UNVERIFIED. Close with a single
 line naming the count of SUPPORTED citations rather than listing them
 individually.
+
+**Account for every key.** Before reporting, reconcile the count: every
+unique key the extractor found is either given a verdict or listed as
+UNVERIFIED or NOT LOCATED. State the arithmetic — "47 keys: 39 verified, 6
+unverified (below), 2 no-claim" — so a gap is visible as a number rather
+than as an absence. A citation dropped because the PDF would not load is the
+one failure this skill must never report as silence.
 
 For each finding that isn't SUPPORTED:
 

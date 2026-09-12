@@ -25,6 +25,46 @@ attack attributed to the wrong paper, or a claim inherited from someone
 else's related-work section without anyone reading the original. Reviewers
 catch these, and they cost credibility out of proportion to their size.
 
+## Run options
+
+Defaults apply unless the request says otherwise. These are read from the
+user's own words — there are no flags to memorise.
+
+| Option | Default | Overridden by |
+|---|---|---|
+| Where the report goes | Inline only | "write it to `review.md`" |
+| Report format | Markdown | "as plain text" |
+| Unfetchable PDFs | Collected, asked once at the end | "stop and ask me each time" |
+| Unreadable papers | Reported UNVERIFIED, run continues | "strict — read every paper, don't guess" |
+| Scope | Ask first on a large bibliography | "check everything, deep" |
+
+**"Check everything" suppresses the scoping question.** Step 1 asks what to
+cover because full-text verification is slow. If the user has already asked
+for the whole bibliography, that question is answered — don't ask it again,
+and don't quietly narrow the run. Say how many references that is, then start.
+
+**A written file never replaces the inline summary.** Writing to disk and
+replying "done, see review.md" hides exactly what the user is scanning for.
+Write the full report to the file *and* still lead inline with the findings
+that aren't SUPPORTED.
+
+A file has no attention budget, so unlike the inline summary it should list
+SUPPORTED entries individually with their evidence locations. Record the date
+and the scope — what was *not* checked — so a partial report isn't later
+mistaken for full coverage.
+
+**Strict mode: a paper you cannot read stops the run.** When the user asks for
+a strict run, a citation whose full text cannot be obtained is not an
+UNVERIFIED line in the report — it is a halt. Name the paper, say what you
+tried, ask for it, and wait. Do not continue past it, do not substitute a
+judgement call, and do not quietly downgrade it to a weaker verdict.
+UNVERIFIED and NOT LOCATED become blockers rather than outcomes: a strict run
+cannot finish while either is outstanding.
+
+Strict mode and a wide scope compose badly on a paywalled bibliography —
+"strict, check everything" may need a great many uploads before it can finish.
+Say so before starting rather than at reference sixty.
+
 ## Workflow
 
 ### 1. Locate the inputs
@@ -32,7 +72,9 @@ catch these, and they cost credibility out of proportion to their size.
 Find the `.tex` and `.bib` files. If the user pointed at a specific claim,
 citation key, or section, scope to that. Otherwise ask what to cover before
 processing a whole bibliography — full-text verification is slow, and a
-90-reference paper is a long run the user may want to narrow.
+90-reference paper is a long run the user may want to narrow. If they have
+already asked for a full deep check, that question is answered — say how many
+references that is and start.
 
 ### 2. Extract citations
 
@@ -110,6 +152,14 @@ Try in this order — for security venues specifically:
 Confirm you fetched the right paper before reading it: match title and
 author list against the bib entry. Landing on a different paper with a
 similar title is a real failure mode and produces confidently wrong verdicts.
+
+**A verdict requires the passage, not the paper's reputation.** Never assign a
+verdict from the title, the bib metadata, an abstract you could reach when the
+full text you could not, a search-result snippet, or your own prior knowledge
+of a well-known paper. Recognising a paper is not reading it. A verdict drawn
+from memory is the most convincing kind of wrong one: the user cannot tell it
+apart from a verified one, so they stop checking. If you did not locate the
+passage, the verdict is UNVERIFIED.
 
 **Version matters.** If the bib cites a published version but you only
 obtained a preprint, say so explicitly in the finding. Numbers and claims
@@ -195,8 +245,8 @@ claim, then assign a verdict.
 | **NOT FOUND** | The paper doesn't address this. Distinct from contradiction. |
 | **CONTRADICTED** | The paper says something incompatible with the claim. |
 | **NO CLAIM** | Bare citation, nothing to verify. |
-| **UNVERIFIED** | Work confirmed to exist, but full text unobtainable. State what was tried. |
-| **NOT LOCATED** | No record of the work found at all. Report first. |
+| **UNVERIFIED** | Work confirmed to exist, but full text unobtainable. State what was tried. In a strict run, this halts the run instead of being reported. |
+| **NOT LOCATED** | No record of the work found at all. Report first. In a strict run, this halts the run. |
 | **OUTDATED VENUE** | Cited as a preprint, but a peer-reviewed version exists. |
 
 Threat-model mismatch deserves particular attention in security writing. A
@@ -207,7 +257,9 @@ what a reviewer will name.
 
 ## Reporting
 
-Report inline in the conversation, not to a file. Lead with what's wrong —
+Report inline in the conversation. Write a file only when the request asks
+for one (see Run options), and even then the inline summary still comes
+first. Lead with what's wrong —
 the user is scanning for problems, and a list that opens with twelve
 SUPPORTED entries buries the one that matters.
 

@@ -1,7 +1,6 @@
 {
   "name": "citation-check",
   "description": "Verify that claims made about cited works in a LaTeX paper are actually supported by those works.",
-  "version": "1.0.0",
   "author": {
     "name": "Gianluca Stringhini"
   },

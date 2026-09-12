@@ -111,6 +111,14 @@ Confirm you fetched the right paper before reading it: match title and
 author list against the bib entry. Landing on a different paper with a
 similar title is a real failure mode and produces confidently wrong verdicts.
 
+**A verdict requires the passage, not the paper's reputation.** Never assign a
+verdict from the title, the bib metadata, an abstract you could reach when the
+full text you could not, a search-result snippet, or your own prior knowledge
+of a well-known paper. Recognising a paper is not reading it. A verdict drawn
+from memory is the most convincing kind of wrong one: the user cannot tell it
+apart from a verified one, so they stop checking. If you did not locate the
+passage, the verdict is UNVERIFIED.
+
 **Version matters.** If the bib cites a published version but you only
 obtained a preprint, say so explicitly in the finding. Numbers and claims
 routinely change between arXiv v1 and camera-ready, and a verdict based on

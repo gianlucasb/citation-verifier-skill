@@ -35,6 +35,7 @@ user's own words — there are no flags to memorise.
 | Where the report goes | Inline only | "write it to `review.md`" |
 | Report format | Markdown | "as plain text" |
 | Unfetchable PDFs | Collected, asked once at the end | "stop and ask me each time" |
+| Unreadable papers | Reported UNVERIFIED, run continues | "strict — read every paper, don't guess" |
 | Scope | Ask first on a large bibliography | "check everything, deep" |
 
 **"Check everything" suppresses the scoping question.** Step 1 asks what to
@@ -51,6 +52,18 @@ A file has no attention budget, so unlike the inline summary it should list
 SUPPORTED entries individually with their evidence locations. Record the date
 and the scope — what was *not* checked — so a partial report isn't later
 mistaken for full coverage.
+
+**Strict mode: a paper you cannot read stops the run.** When the user asks for
+a strict run, a citation whose full text cannot be obtained is not an
+UNVERIFIED line in the report — it is a halt. Name the paper, say what you
+tried, ask for it, and wait. Do not continue past it, do not substitute a
+judgement call, and do not quietly downgrade it to a weaker verdict.
+UNVERIFIED and NOT LOCATED become blockers rather than outcomes: a strict run
+cannot finish while either is outstanding.
+
+Strict mode and a wide scope compose badly on a paywalled bibliography —
+"strict, check everything" may need a great many uploads before it can finish.
+Say so before starting rather than at reference sixty.
 
 ## Workflow
 
@@ -232,8 +245,8 @@ claim, then assign a verdict.
 | **NOT FOUND** | The paper doesn't address this. Distinct from contradiction. |
 | **CONTRADICTED** | The paper says something incompatible with the claim. |
 | **NO CLAIM** | Bare citation, nothing to verify. |
-| **UNVERIFIED** | Work confirmed to exist, but full text unobtainable. State what was tried. |
-| **NOT LOCATED** | No record of the work found at all. Report first. |
+| **UNVERIFIED** | Work confirmed to exist, but full text unobtainable. State what was tried. In a strict run, this halts the run instead of being reported. |
+| **NOT LOCATED** | No record of the work found at all. Report first. In a strict run, this halts the run. |
 | **OUTDATED VENUE** | Cited as a preprint, but a peer-reviewed version exists. |
 
 Threat-model mismatch deserves particular attention in security writing. A

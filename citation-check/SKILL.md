@@ -25,6 +25,33 @@ attack attributed to the wrong paper, or a claim inherited from someone
 else's related-work section without anyone reading the original. Reviewers
 catch these, and they cost credibility out of proportion to their size.
 
+## Run options
+
+Defaults apply unless the request says otherwise. These are read from the
+user's own words — there are no flags to memorise.
+
+| Option | Default | Overridden by |
+|---|---|---|
+| Where the report goes | Inline only | "write it to `review.md`" |
+| Report format | Markdown | "as plain text" |
+| Unfetchable PDFs | Collected, asked once at the end | "stop and ask me each time" |
+| Scope | Ask first on a large bibliography | "check everything, deep" |
+
+**"Check everything" suppresses the scoping question.** Step 1 asks what to
+cover because full-text verification is slow. If the user has already asked
+for the whole bibliography, that question is answered — don't ask it again,
+and don't quietly narrow the run. Say how many references that is, then start.
+
+**A written file never replaces the inline summary.** Writing to disk and
+replying "done, see review.md" hides exactly what the user is scanning for.
+Write the full report to the file *and* still lead inline with the findings
+that aren't SUPPORTED.
+
+A file has no attention budget, so unlike the inline summary it should list
+SUPPORTED entries individually with their evidence locations. Record the date
+and the scope — what was *not* checked — so a partial report isn't later
+mistaken for full coverage.
+
 ## Workflow
 
 ### 1. Locate the inputs
@@ -32,7 +59,9 @@ catch these, and they cost credibility out of proportion to their size.
 Find the `.tex` and `.bib` files. If the user pointed at a specific claim,
 citation key, or section, scope to that. Otherwise ask what to cover before
 processing a whole bibliography — full-text verification is slow, and a
-90-reference paper is a long run the user may want to narrow.
+90-reference paper is a long run the user may want to narrow. If they have
+already asked for a full deep check, that question is answered — say how many
+references that is and start.
 
 ### 2. Extract citations
 
@@ -215,7 +244,9 @@ what a reviewer will name.
 
 ## Reporting
 
-Report inline in the conversation, not to a file. Lead with what's wrong —
+Report inline in the conversation. Write a file only when the request asks
+for one (see Run options), and even then the inline summary still comes
+first. Lead with what's wrong —
 the user is scanning for problems, and a list that opens with twelve
 SUPPORTED entries buries the one that matters.
 

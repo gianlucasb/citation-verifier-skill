@@ -69,10 +69,13 @@ Once installed, just ask, in either surface:
 
 > Verify the related-work section's claims.
 
+> Check everything, deep, and write the report to `review.md`.
+
 Claude finds the skill from the request itself — you don't need to invoke it
-by name. For a large bibliography, expect it to ask what to scope to first;
-full-text verification of every reference in a 90-citation paper is a long
-run.
+by name, and there are no flags: options are read from how you phrase the
+request. For a large bibliography, expect it to ask what to scope to first
+unless you have already said to check everything; full-text verification of
+every reference in a 90-citation paper is a long run.
 
 ## Requirements
 

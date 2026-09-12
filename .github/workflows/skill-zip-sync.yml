@@ -1,0 +1,42 @@
+# citation-check.skill is a build artifact committed to the repo, because
+# claude.ai's skill uploader takes a zip and has no build step. Committed
+# artifacts drift: the zip went three merged PRs without a rebuild, so every
+# claude.ai install was running the release-day extractor while the repo
+# looked correct. The README asks contributors to run build-skill-zip.sh;
+# this checks that they did.
+name: skill-zip-sync
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Compare the archive's CONTENTS, not its bytes. zip records mtimes, so
+      # rebuilding here and diffing the two files would fail on every run even
+      # when the skill is perfectly in sync.
+      - name: citation-check.skill matches citation-check/
+        run: |
+          tmp=$(mktemp -d)
+          unzip -q citation-check.skill -d "$tmp"
+
+          # .claude-plugin is excluded by build-skill-zip.sh on purpose -- it is
+          # Claude Code plugin metadata, not part of the skill format claude.ai
+          # expects -- so it is in the tree and absent from the zip by design.
+          if diff -r "$tmp/citation-check" citation-check \
+               -x '.claude-plugin' -x '.DS_Store'; then
+            echo "citation-check.skill is in sync."
+          else
+            echo
+            echo "::error::citation-check.skill is out of sync with citation-check/."
+            echo "Run scripts/build-skill-zip.sh and commit the regenerated zip."
+            exit 1
+          fi
